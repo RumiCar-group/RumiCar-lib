@@ -7,6 +7,15 @@ VL53L0X sensor0;
 VL53L0X sensor1;
 VL53L0X sensor2;
 
+// Runtime motor pin/channel variables. Initialized from board-specific
+// *_PIN macros at the top of RC_setup(). On ESP32 they are subsequently
+// overwritten with LEDC PWM channel numbers (0..3) so that RC_analogWrite
+// (= ledcWrite) operates on channels rather than GPIO numbers.
+uint8_t AIN1 = AIN1_PIN;
+uint8_t AIN2 = AIN2_PIN;
+uint8_t BIN1 = BIN1_PIN;
+uint8_t BIN2 = BIN2_PIN;
+
 namespace
 {
 VL53L0X& getSensor(uint8_t pin)
@@ -55,6 +64,13 @@ void initI2C()
 
 void RC_setup()
 {
+  // (Re)initialize motor pin/channel variables on every boot. These may have
+  // been overwritten with PWM channel numbers on ESP32 in a previous run.
+  AIN1 = AIN1_PIN;
+  AIN2 = AIN2_PIN;
+  BIN1 = BIN1_PIN;
+  BIN2 = BIN2_PIN;
+
 #if defined (ARDUINO_ARCH_SPRESENSE)
   Serial.begin(115200);
 #else
@@ -103,13 +119,13 @@ void RC_setup()
 
 #if defined ESP32
   //ESP32の場合はピン番号ではなくチャンネルでPWMを行うのでチャンネルとして再設定
-#define PWM_level 8
-  // 8の場合8bitの解像度でArduinoと同じESPは16bit迄行ける？
+  const uint8_t PWM_resolution = 8;
+  // 8の場合8bitの解像度でArduinoと同じ
   //モータのPWMのチャンネル、周波数の設定
-  ledcSetup(0, 490, PWM_level);
-  ledcSetup(1, 490, PWM_level);
-  ledcSetup(2, 960, PWM_level);
-  ledcSetup(3, 960, PWM_level);
+  ledcSetup(0, 490, PWM_resolution);
+  ledcSetup(1, 490, PWM_resolution);
+  ledcSetup(2, 960, PWM_resolution);
+  ledcSetup(3, 960, PWM_resolution);
 
   //モータのピンとチャンネルの設定
   ledcAttachPin(AIN1, 0);
