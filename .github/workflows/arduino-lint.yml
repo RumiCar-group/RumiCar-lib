@@ -1,1 +1,49 @@
+name: Arduino Lint
 
+# 公式の arduino/arduino-lint-action を使い、Library Manager 申請時と
+# 同じ検証ルール (--library-manager submit 相当) でリポジトリを自動検証する。
+# https://github.com/arduino/arduino-lint-action
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  # 必要に応じて手動実行も可能にする
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Arduino Lint
+        uses: arduino/arduino-lint-action@v2
+        with:
+          # Library Manager 新規登録時と同じ厳格ルールで検証
+          compliance: specification
+          library-manager: submit
+          # 警告も含めて表示
+          report-file: arduino-lint-report.json
+          # プロジェクトタイプを明示 (リポジトリ全体を1つのライブラリとして扱う)
+          project-type: library
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arduino-lint-report
+          path: arduino-lint-report.json
+          retention-days: 30
