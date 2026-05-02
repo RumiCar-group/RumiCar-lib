@@ -1,0 +1,27 @@
+#######################################
+# Syntax Coloring Map For RumiCar
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+RC_setup	KEYWORD2
+RC_steer	KEYWORD2
+RC_drive	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+LEFT	LITERAL1
+CENTER	LITERAL1
+RIGHT	LITERAL1
+FREE	LITERAL1
+REVERSE	LITERAL1
+FORWARD	LITERAL1
+BRAKE	LITERAL1
