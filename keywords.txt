@@ -13,6 +13,10 @@
 RC_setup	KEYWORD2
 RC_steer	KEYWORD2
 RC_drive	KEYWORD2
+sensor0	KEYWORD2
+sensor1	KEYWORD2
+sensor2	KEYWORD2
+RC_read	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)
@@ -25,3 +29,11 @@ FREE	LITERAL1
 REVERSE	LITERAL1
 FORWARD	LITERAL1
 BRAKE	LITERAL1
+
+#######################################
+# Sensor mode (LITERAL1)
+#######################################
+
+HIGH_SPEED	LITERAL1
+HIGH_ACCURACY	LITERAL1
+LONG_RANGE	LITERAL1
