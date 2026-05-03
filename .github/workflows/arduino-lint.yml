@@ -1,7 +1,8 @@
 name: Arduino Lint
 
-# 公式の arduino/arduino-lint-action を使い、Library Manager 申請時と
-# 同じ検証ルール (--library-manager submit 相当) でリポジトリを自動検証する。
+# 公式の arduino/arduino-lint-action を使い、Library Manager 登録済みライブラリの
+# 更新時ルール (--library-manager update 相当) でリポジトリを自動検証する。
+# 注: v0.1.0 で Library Manager に登録済みのため、submit ではなく update を使用。
 # https://github.com/arduino/arduino-lint-action
 
 on:
@@ -32,9 +33,9 @@ jobs:
       - name: Run Arduino Lint
         uses: arduino/arduino-lint-action@v2
         with:
-          # Library Manager 新規登録時と同じ厳格ルールで検証
+          # Library Manager 登録済みライブラリの更新時ルールで検証
           compliance: specification
-          library-manager: submit
+          library-manager: update
           # 警告も含めて表示
           report-file: arduino-lint-report.json
           # プロジェクトタイプを明示 (リポジトリ全体を1つのライブラリとして扱う)
