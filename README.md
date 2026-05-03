@@ -69,6 +69,46 @@ The three distance sensors are also exposed as global `VL53L0X` objects: `sensor
 form (`sensor1.readRangeSingleMillimeters()`) on purpose, so learners experience the
 underlying API before discovering the simpler `RC_read(CENTER)` alternative.
 
+## Reserved names and library-managed state
+
+To avoid name collisions, **do not redefine or reuse the following names** in your sketch.
+
+### Macros (defined in `RumiCar.h`)
+
+| Category | Names |
+|---|---|
+| Steering directions | `LEFT`, `CENTER`, `RIGHT` |
+| Drive directions | `FREE`, `REVERSE`, `FORWARD`, `BRAKE` |
+| Sensor XSHUT pins | `SHUT0`, `SHUT1`, `SHUT2` |
+| Motor pin macros | `AIN1_PIN`, `AIN2_PIN`, `BIN1_PIN`, `BIN2_PIN` |
+| Servo pin macros (unused) | `SERVO1`, `SERVO2` |
+| I2C pin macros (Pico W only) | `SCL0`, `SDA0` |
+| PWM helper | `RC_analogWrite` |
+| Sensor mode flags | `LONG_RANGE`, `HIGH_SPEED`, `HIGH_ACCURACY` |
+| Header guard | `RumiCar_h` |
+
+### Global variables (declared in `RumiCar.h`, defined in `RumiCar.cpp`)
+
+| Type | Names | Purpose |
+|---|---|---|
+| `uint8_t` | `AIN1`, `AIN2`, `BIN1`, `BIN2` | Runtime motor pin/channel numbers. **Do not modify directly** — set by `RC_setup()`. On ESP32 these are overwritten with PWM channel numbers (0..3). |
+| `VL53L0X` | `sensor0`, `sensor1`, `sensor2` | Distance sensors (LEFT, CENTER, RIGHT). Initialized and started in continuous mode by `RC_setup()`. |
+
+### Functions
+
+`RC_setup`, `RC_steer`, `RC_drive`, `RC_read`
+
+### Library-managed state (side effects of `RC_setup()`)
+
+`RC_setup()` performs the following initialization automatically. You do not need to call these yourself:
+
+- **`Serial.begin()`** — 115200 bps on Arduino Spresense, 9600 bps on other architectures.
+- **`Wire.begin()`** — I2C bus initialization (custom SDA/SCL on Pico W).
+- **`sensor0.startContinuous()`, `sensor1.startContinuous()`, `sensor2.startContinuous()`** — all three sensors are started in continuous ranging mode.
+- **PWM setup** — board-specific (e.g., LEDC channels on ESP32, 10 kHz default frequency on Spresense).
+
+Calling `Serial.begin()` or `Wire.begin()` again in your own `setup()` is harmless but unnecessary.
+
 ## Usage
 
 After installing, open **File > Examples > RumiCar** to see a series of sketches:
