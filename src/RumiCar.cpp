@@ -186,3 +186,29 @@ int RC_drive(int direc, int ipwm){
   }
   return 1;
 }
+
+// 距離測定関数: 指定方向のセンサで距離を取得
+// 戻り値: 0-2000=mm距離(正常), -1=タイムアウト, -2=引数エラー, -3=範囲外/信号品質低下
+int RC_read(int direc)
+{
+  VL53L0X *sensor;
+
+  switch (direc) {
+    case LEFT:   sensor = &sensor0; break;
+    case CENTER: sensor = &sensor1; break;
+    case RIGHT:  sensor = &sensor2; break;
+    default: return -2;  // 引数エラー
+  }
+
+  uint16_t raw = sensor->readRangeSingleMillimeters();
+
+  if (sensor->timeoutOccurred()) {
+    return -1;  // タイムアウト
+  }
+
+  if (raw > 2000) {
+    return -3;  // 範囲外/信号品質低下
+  }
+
+  return (int)raw;  // 正常値 (0-2000mm)
+}
