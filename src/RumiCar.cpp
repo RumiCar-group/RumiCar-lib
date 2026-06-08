@@ -167,23 +167,53 @@ int RC_steer (int direc ){
   return 1;
 }
 
+// 走行モータの駆動方式・始動キックの調整パラメータ
+// (実機・低電池寄りの条件でキャリブレーションして確定する)
+#define KICK_DUTY 200   // 走り出し時に静止摩擦を破る一発の大きさ (0-255)
+#define KICK_MS   20    // キックを与える時間 [ms]
+
+// スローデケイ(drive/brake)で走行モータを駆動する内部関数。
+// DRV8835(IN/IN)では片方の入力をHIGH固定し、もう片方を反転PWMすることで
+// 駆動とブレーキを交互に切り替える(=スローデケイ)。fast decay(drive/coast)より
+// 低dutyでの始動性と duty-速度の線形性が向上する。
+// s=0 のとき両入力HIGH=ブレーキ相当、s=255 で連続駆動。
+static void driveSlowDecay(int direc, int s)
+{
+  if ( direc == FORWARD ){
+    RC_analogWrite(BIN1, 255);
+    RC_analogWrite(BIN2, 255 - s);
+  }else{ // REVERSE
+    RC_analogWrite(BIN2, 255);
+    RC_analogWrite(BIN1, 255 - s);
+  }
+}
+
 //走行の関数
 int RC_drive(int direc, int ipwm){
+  static int prevDirec = FREE;   // 直前の駆動状態(走り出しエッジ検出用)
+
+  if ( ipwm < 0 )   ipwm = 0;    // 入力ガード
+  if ( ipwm > 255 ) ipwm = 255;
+
   if ( direc == FREE ){
     RC_analogWrite(BIN1,0);
     RC_analogWrite(BIN2,0);
-  }else if ( direc == REVERSE ){
-    RC_analogWrite(BIN1,0);
-    RC_analogWrite(BIN2,ipwm);
-  }else if ( direc == FORWARD ){
-    RC_analogWrite(BIN1,ipwm);
-    RC_analogWrite(BIN2,0);
+  }else if ( direc == REVERSE || direc == FORWARD ){
+    // 停止/逆方向からの走り出しエッジでのみ始動キックを打つ
+    if ( prevDirec != direc && ipwm > 0 ){
+      driveSlowDecay(direc, KICK_DUTY);
+      delay(KICK_MS);            // Timer0は変更しないのでdelayは正確
+    }
+    driveSlowDecay(direc, ipwm); // 目標速度(スローデケイ)
   }else if ( direc == BRAKE ){
-    RC_analogWrite(BIN1,ipwm);
-    RC_analogWrite(BIN2,ipwm);
+    // 確実停止: 両入力HIGH (ipwmは無視)
+    RC_analogWrite(BIN1,255);
+    RC_analogWrite(BIN2,255);
   }else{
-    return 0;
+    return 0;                    // 未知の方向: prevDirec更新せず
   }
+
+  prevDirec = direc;
   return 1;
 }
 
