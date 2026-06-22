@@ -6,6 +6,17 @@
 VL53L0X sensor0;
 VL53L0X sensor1;
 VL53L0X sensor2;
+VL53L0X sensor3;   // リア (任意搭載。固有アドレス REAR_ADDR で運用)
+
+// リアセンサに割り当てる固有アドレス。
+// 前方3個の最大アドレス + 1。setSensorAddress() に渡す 20/21/22 は 10進リテラル
+// なので実体は 0x14 / 0x15 / 0x16。その最大 0x16 (=10進22) の次が 0x17 (=10進23)。
+// 0x29(初期値) とも前方とも衝突せず (<0x7F)、同一バス上の他デバイスとも重ならない値。
+#define REAR_ADDR 0x17
+
+// リアセンサの搭載有無 (起動時に自動検出)。
+// リア非搭載の車両では false のままとなり、リア関連処理は一切実行されない。
+static bool rearSensorPresent = false;
 
 // Runtime motor pin/channel variables. Initialized from board-specific
 // *_PIN macros at the top of RC_setup(). On ESP32 they are subsequently
@@ -41,13 +52,60 @@ void setSensorAddress(uint8_t pin, uint8_t address)
   // next device won't overwrite it
 }
 
+// リアセンサ(任意搭載)の検出と初期化。
+// 前方3個が reset 中(= バス上で 0x29 / REAR_ADDR を名乗り得るのはリアだけ)の
+// タイミングで呼び出すこと。
+//  - 通常起動  : リアは初期値 0x29 にいる → 0x29 を REAR_ADDR へ書き換える。
+//  - ウォーム  : 前回値 REAR_ADDR が残っている場合がある → 既にその位置でOK。
+//    リセット   (sensor3.address は既定 0x29 のため、0x29 宛の書き込みは空振りし、
+//                オブジェクトの宛先だけが REAR_ADDR に揃う。実機とソフトが一致する)
+//  - 非搭載    : 0x29 / REAR_ADDR のどちらも応答しない → 何もせず false のまま。
+void initRearSensor()
+{
+  // 0x29(初期値) と REAR_ADDR(前回退避先) の両方を当たって搭載有無を判定する
+  Wire.beginTransmission(0x29);
+  bool present = (Wire.endTransmission() == 0);
+  if (!present)
+  {
+    Wire.beginTransmission(REAR_ADDR);
+    present = (Wire.endTransmission() == 0);
+  }
+  rearSensorPresent = present;
+  if (!rearSensorPresent) return;   // リア非搭載車: 以降を一切実行しない
+
+  // 0x29 を空けるためリアを固有アドレスへ移す。
+  // (既に REAR_ADDR にいる場合、この 0x29 宛書き込みは空振りし、
+  //  sensor3.address だけが REAR_ADDR に更新される = 実機と一致)
+  delay(2);
+  sensor3.setAddress(REAR_ADDR);
+  sensor3.init(true);
+  sensor3.setTimeout(500);
+
+#if defined LONG_RANGE
+  sensor3.setSignalRateLimit(0.1);
+  sensor3.setVcselPulsePeriod(VL53L0X::VcselPeriodPreRange, 18);
+  sensor3.setVcselPulsePeriod(VL53L0X::VcselPeriodFinalRange, 14);
+#endif
+
+#if defined HIGH_SPEED
+  sensor3.setMeasurementTimingBudget(20000);
+#elif defined HIGH_ACCURACY
+  sensor3.setMeasurementTimingBudget(200000);
+#endif
+
+  sensor3.startContinuous();
+}
+
 void initI2C()
 {
-  // turn off VL53L0X, so later turn them on one by one and set address
+  // turn off the three FRONT VL53L0X, so later turn them on one by one and set
+  // address. The (optional) REAR sensor has no XSHUT and is always powered.
   digitalWrite(SHUT0, LOW);
   digitalWrite(SHUT1, LOW);
   digitalWrite(SHUT2, LOW);
   delay(150);
+  // At this point every front sensor is held in reset, so the ONLY device that
+  // can answer at 0x29 (or REAR_ADDR) on the bus is the rear sensor, if fitted.
 
 #if defined SDA0 && defined SCL0
   Wire.setSDA(SDA0);
@@ -55,7 +113,13 @@ void initI2C()
 #endif
   Wire.begin();
 
-  // address needs to be set on each boot
+  // Detect and set up the rear sensor FIRST so that 0x29 is freed before the
+  // front sensors are brought up. On a vehicle with no rear sensor this is a
+  // no-op and the library runs as a plain 3-sensor build.
+  initRearSensor();
+
+  // Assign the three front sensors. The rear (if present) is already off 0x29,
+  // so it is not affected by these writes; if absent, 0x29 is simply empty.
   setSensorAddress(SHUT0, 20);
   setSensorAddress(SHUT1, 21);
   setSensorAddress(SHUT2, 22);
@@ -218,7 +282,9 @@ int RC_drive(int direc, int ipwm){
 }
 
 // 距離測定関数: 指定方向のセンサで距離を取得
-// 戻り値: 0-2000=mm距離(正常), -1=タイムアウト, -2=引数エラー, -3=範囲外/信号品質低下
+// direc: LEFT / CENTER / RIGHT / REAR
+// 戻り値: 0-2000=mm距離(正常), -1=タイムアウト(REARではリア非搭載車も含む),
+//         -2=引数エラー, -3=範囲外/信号品質低下
 int RC_read(int direc)
 {
   VL53L0X *sensor;
@@ -227,6 +293,12 @@ int RC_read(int direc)
     case LEFT:   sensor = &sensor0; break;
     case CENTER: sensor = &sensor1; break;
     case RIGHT:  sensor = &sensor2; break;
+    case REAR:
+      // リア非搭載車では未接続として扱い、未応答(-1)を返す。
+      // これにより同一スケッチがリア有/無とちらの車両でもそのまま動作する。
+      if (!rearSensorPresent) return -1;
+      sensor = &sensor3;
+      break;
     default: return -2;  // 引数エラー
   }
 
