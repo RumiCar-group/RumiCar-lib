@@ -295,7 +295,7 @@ int RC_read(int direc)
     case RIGHT:  sensor = &sensor2; break;
     case REAR:
       // リア非搭載車では未接続として扱い、未応答(-1)を返す。
-      // これにより同一スケッチがリア有/無とちらの車両でもそのまま動作する。
+      // これにより同一スケッチがリア有/無どちらの車両でもそのまま動作する。
       if (!rearSensorPresent) return -1;
       sensor = &sensor3;
       break;
