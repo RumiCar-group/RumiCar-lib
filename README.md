@@ -135,19 +135,31 @@ Calling `Serial.begin()` or `Wire.begin()` again in your own `setup()` is harmle
 
 ## Usage
 
-After installing, open **File > Examples > RumiCar** to see a series of sketches:
+After installing, open **File > Examples > RumiCar** to see a series of sketches.
+
+The `Exercise-*` sketches are the programs used in the RumiCar hands-on textbook
+(see the `Hands-on text` folder of [RumiCar-group/RumiCar](https://github.com/RumiCar-group/RumiCar)),
+and they keep the same names as the textbook. The numbering follows the course:
+**Exercise-1** reads the sensors, **Exercise-2** controls the motors, and **Exercise-3**
+combines sensor readings and motor control to drive autonomously.
 
 | Example | Description |
 |---|---|
+| `Exercise` | Starting template with an empty `loop()`. In Exercise-1.1 you add one line to print the center distance. |
+| `Exercise-1.1` | Print the center distance to Serial. |
+| `Exercise-1.2` | Print all three sensor distances on one line (great with Serial Plotter, which is Exercise-1.3). |
+| `Exercise-2.1` | Alternate steering right and left. |
+| `Exercise-2.2` | Drive forward at three different PWM speeds. |
+| `Exercise-2.3` | Alternate forward and reverse. |
+| `Exercise-2.4` | Zigzag motion combining drive and steering. |
+| `Exercise-3.1` | Stop safely: distance-based control using the center sensor. |
+| `Exercise-3.2` | Drive down a street: autonomous control using all three sensors. |
 | `Basic` | Minimal sketch: forward, brake, coast in a loop. |
-| `01_DistanceSingle` | Print the center distance to Serial. |
-| `02_DistanceTriple` | Print all three sensor distances on one line (great with Serial Plotter). |
-| `03_Steering` | Alternate steering right and left. |
-| `04_DriveSpeed` | Drive forward at three different PWM speeds. |
-| `05_DriveForwardReverse` | Alternate forward and reverse. |
-| `06_ZigZag` | Zigzag motion combining drive and steering. |
-| `07_Autonomous_Center` | Distance-based autonomous control using the center sensor. |
-| `08_Autonomous_AllSensors` | Full autonomous control using all three sensors. |
+
+> Up to v0.3.0 these sketches were named `01_DistanceSingle` … `08_Autonomous_AllSensors`.
+> From v0.4.0 they use the textbook names: `01`→`Exercise-1.1`, `02`→`Exercise-1.2`,
+> `03`→`Exercise-2.1`, `04`→`Exercise-2.2`, `05`→`Exercise-2.3`, `06`→`Exercise-2.4`,
+> `07`→`Exercise-3.1`, `08`→`Exercise-3.2`. The code itself is unchanged.
 
 ## License
 
