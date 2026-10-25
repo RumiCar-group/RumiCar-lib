@@ -140,8 +140,9 @@ After installing, open **File > Examples > RumiCar** to see a series of sketches
 The `Exercise-*` sketches are the programs used in the RumiCar hands-on textbook
 (see the `Hands-on text` folder of [RumiCar-group/RumiCar](https://github.com/RumiCar-group/RumiCar)),
 and they keep the same names as the textbook. The numbering follows the course:
-**Exercise-1** reads the sensors, **Exercise-2** controls the motors, and **Exercise-3**
-combines sensor readings and motor control to drive autonomously.
+**Exercise-1** reads the sensors, **Exercise-2** controls the motors, **Exercise-3**
+combines sensor readings and motor control to drive autonomously, and **Exercise-4**
+improves a sketch together with an AI coding agent (see below).
 
 | Example | Description |
 |---|---|
@@ -154,8 +155,31 @@ combines sensor readings and motor control to drive autonomously.
 | `Exercise-2.4` | Zigzag motion combining drive and steering. |
 | `Exercise-3.1` | Stop safely: distance-based control using the center sensor. |
 | `Exercise-3.2` | Drive down a street: autonomous control using all three sensors. |
+| `Exercise-4.1` | Starting point for the AI exercise "forward and reverse without slipping": the same code as Exercise-2.3, plus `AGENTS.md`. |
+| `Exercise-4.1-Answer` | One answer: ramp the PWM up and down and brake before changing direction. |
+| `Exercise-4.2` | Starting point for the AI exercise "a car that backs out when it gets stuck": the same code as Exercise-3.2, plus `AGENTS.md`. |
+| `Exercise-4.2-Answer` | One answer: three ways to detect that the car is stuck (direction flips, no progress, three sides close) and a bounded back-and-forth escape maneuver. |
 | `Basic` | Minimal sketch: forward, brake, coast in a loop. |
 
+### Exercise-4: improving a sketch with an AI coding agent
+
+In Exercise-4 the learner saves a copy of the sketch, opens the sketch folder in a terminal and asks an
+AI coding agent (the textbook uses Google's Antigravity CLI, `agy`) in plain language, e.g. "make the
+acceleration smoother". The agent edits the `.ino` in place and Arduino IDE 2 picks up the change
+automatically; the learner reviews the diff, approves it, and uploads from the IDE as usual.
+
+The `Exercise-4.1` and `Exercise-4.2` folders each ship an `AGENTS.md`: the rules the agent must follow
+(only touch the `.ino`, only use the RumiCar API, bounded reversing, compile with the IDE's bundled
+`arduino-cli` before handing back, never upload). Arduino treats `.md` as a non-compiled sketch file,
+so `AGENTS.md` shows up as a tab next to the sketch and is copied along by **File > Save As**. Both
+copies of `AGENTS.md` are identical (checked in CI). The `*-Answer` sketches are reference answers for
+learners who want to compare after trying themselves.
+
+Board settings differ by the computer module's USB connector: Type-C modules use processor
+"ATmega328P" (`arduino:avr:nano:cpu=atmega328`), Mini-USB modules use "ATmega328P (Old Bootloader)"
+(`arduino:avr:nano:cpu=atmega328old`).
+
+> v0.5.0 adds `Exercise-4.1`, `Exercise-4.2` and their `*-Answer` sketches; the earlier sketches are unchanged.
 > Up to v0.3.0 these sketches were named `01_DistanceSingle` … `08_Autonomous_AllSensors`.
 > From v0.4.0 they use the textbook names: `01`→`Exercise-1.1`, `02`→`Exercise-1.2`,
 > `03`→`Exercise-2.1`, `04`→`Exercise-2.2`, `05`→`Exercise-2.3`, `06`→`Exercise-2.4`,
