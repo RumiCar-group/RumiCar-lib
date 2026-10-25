@@ -207,12 +207,14 @@ void loop()
   Serial.print(" flips:"); Serial.print(flipCount);
   Serial.print(" stall:"); Serial.println(stallCount);
 
-  bool canJudge = (millis() >= cooldownEnd);
-  if (canJudge && (stuckByFlip() || stuckByNoProgress(s1) || stuckByThreeSides(s0, s1, s2))) {
+  bool canJudge = (millis() >= cooldownEnd);   // 脱出の直後は判定しない
+  if (canJudge && (stuckByFlip()
+                   || stuckByNoProgress(s1)
+                   || stuckByThreeSides(s0, s1, s2))) {
     Serial.println("STUCK");
-    escape(s0, s2);
+    escape(s0, s2);                           // 切り返し（最大 ESCAPE_TRIES 回）
     return;
   }
 
-  driveLikeExercise32(s0, s1, s2);
+  driveLikeExercise32(s0, s1, s2);            // 3.2 と同じ走り方
 }
