@@ -1,0 +1,46 @@
+name: Compile Examples
+
+# すべてのスケッチ例を、ハンズオンで使う Arduino Nano の 2 つの設定でコンパイルする。
+# Type-C 端子の CM = ATmega328P (atmega328)、Mini-USB 端子の CM = Old Bootloader (atmega328old)。
+# どちらも同じ AVR コードなのでビルド結果は同じだが、FQBN が有効であることも合わせて確かめる。
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        fqbn:
+          - arduino:avr:nano:cpu=atmega328
+          - arduino:avr:nano:cpu=atmega328old
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compile all examples
+        uses: arduino/compile-sketches@v1
+        with:
+          fqbn: ${{ matrix.fqbn }}
+          libraries: |
+            - source-path: ./
+            - name: VL53L0X
+          sketch-paths: |
+            - examples
+          enable-warnings-report: true
+          verbose: false

@@ -30,6 +30,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Exercise-4.1 と Exercise-4.2 に同梱する AGENTS.md は同一内容でなければならない
+      # (シンボリックリンクは Library Manager の規則で使えないため実体を 2 つ置いている)
+      - name: Check that the two AGENTS.md copies are identical
+        run: diff -u examples/Exercise-4.1/AGENTS.md examples/Exercise-4.2/AGENTS.md
+
       - name: Run Arduino Lint
         uses: arduino/arduino-lint-action@v2
         with:
