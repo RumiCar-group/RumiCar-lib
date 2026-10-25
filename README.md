@@ -176,10 +176,12 @@ copies of `AGENTS.md` are identical (checked in CI). The `*-Answer` sketches are
 learners who want to compare after trying themselves.
 
 Board settings differ by the computer module's USB connector: Type-C modules use processor
-"ATmega328P" (`arduino:avr:nano:cpu=atmega328`), Mini-USB modules use "ATmega328P (Old Bootloader)"
-(`arduino:avr:nano:cpu=atmega328old`).
+"ATmega328P" (`arduino:avr:nano:cpu=atmega328`); the older modules with a Mini-USB or Micro-USB connector use
+"ATmega328P (Old Bootloader)" (`arduino:avr:nano:cpu=atmega328old`). Both types use the CH340 USB-serial chip, so the driver is the same.
 
 > v0.5.0 adds `Exercise-4.1`, `Exercise-4.2` and their `*-Answer` sketches; the earlier sketches are unchanged.
+> Threshold tuning and other improvements after v0.5.0 are released as v0.5.1, v0.5.2, … — Library Manager shows an **Update** button when a new version is available.
+> Please report problems and tuning results as [GitHub Issues](https://github.com/RumiCar-group/RumiCar-lib/issues).
 > Up to v0.3.0 these sketches were named `01_DistanceSingle` … `08_Autonomous_AllSensors`.
 > From v0.4.0 they use the textbook names: `01`→`Exercise-1.1`, `02`→`Exercise-1.2`,
 > `03`→`Exercise-2.1`, `04`→`Exercise-2.2`, `05`→`Exercise-2.3`, `06`→`Exercise-2.4`,

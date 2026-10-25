@@ -1,5 +1,7 @@
 # AGENTS.md — RumiCar の Exercise を AI と一緒に改良するときのお約束
 
+> **English summary (the rules below are in Japanese):** This folder is an Arduino sketch for RumiCar, a small self-driving teaching car. The users are programming-class students (children to adults) practicing how to improve a sketch together with an AI. Rules: edit only the `.ino` in this folder — never create files or edit `AGENTS.md`; never upload to the board (a person uploads from Arduino IDE); use only the RumiCar API (`RC_setup`, `RC_steer`, `RC_drive`, `RC_read` — see the table in section 2); every reversing routine needs a time or count limit, no unbounded loops, `pwm` within 0–255, `delay()` of a few seconds at most, keep `setup()`/`loop()`; keep changes minimal; reply in the language the user writes in, briefly (about 3 lines: what you changed and why), ask one question if the request is ambiguous; after editing, compile-check (no upload) with the Arduino IDE's bundled arduino-cli using the FQBN for the user's CM port — Type-C (default): `arduino:avr:nano:cpu=atmega328`, older Mini-USB or Micro-USB: `arduino:avr:nano:cpu=atmega328old` — commands in section 5.
+
 このフォルダは RumiCar（小さな自動運転の教材用の車）の Arduino スケッチです。
 使っている人はプログラミング教室の参加者（小学生〜大人）で、AI と一緒にスケッチを改良する練習をしています。
 あなた（AI）は次の約束を守って手伝ってください。
@@ -36,8 +38,8 @@
 
 ## 4. 書き方とやり取り
 
-- 相手は初心者です。変数名は意味の分かる英語にし、変更した場所には短い日本語のコメントを付けてください。
-- 返事は日本語で。「何を・なぜ変えたか」を 3 行程度で説明してください。長い解説は不要です。
+- 相手は初心者です。変数名は意味の分かる英語にし、変更した場所には短いコメントを付けてください（コメントは相手が使っている言語で）。
+- 返事は相手が使っている言語で（日本語で頼まれたら日本語、英語なら英語）。「何を・なぜ変えたか」を 3 行程度で説明してください。長い解説は不要です。
 - 頼まれた内容があいまいなときは、勝手に決めずに 1 つだけ質問してください。
 
 ## 5. 変更したらコンパイルを確認する
@@ -48,7 +50,7 @@
 | CM の端子 | FQBN |
 |---|---|
 | Type-C（既定） | `arduino:avr:nano:cpu=atmega328` |
-| Mini-USB（旧型） | `arduino:avr:nano:cpu=atmega328old` |
+| Mini-USB または Micro-USB（旧型） | `arduino:avr:nano:cpu=atmega328old` |
 
 Windows（PowerShell）：
 
