@@ -3,6 +3,12 @@ name: Compile Examples
 # すべてのスケッチ例を、ハンズオンで使う Arduino Nano の 2 つの設定でコンパイルする。
 # Type-C 端子の CM = ATmega328P (atmega328)、Mini-USB 端子の CM = Old Bootloader (atmega328old)。
 # どちらも同じ AVR コードなのでビルド結果は同じだが、FQBN が有効であることも合わせて確かめる。
+#
+# arduino-cli を直接使う (Arduino IDE 2 が内部で使っているのと同じツール)。
+# 以前使っていた arduino/compile-sketches@v1 は Python 3.12.4 を固定で要求し、
+# ubuntu-latest が 26.04 になった 2026-11 以降は setup-python が
+# "The version '3.12.4' ... was not found for Ubuntu 26.04" で失敗するため置き換えた。
+
 on:
   push:
     branches:
@@ -21,7 +27,7 @@ permissions:
 
 jobs:
   compile:
-    runs-on: ubuntu-24.04   # ubuntu-latest (26.04) には compile-sketches@v1 が要求する Python 3.12.4 が無い (2026-11-01)
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -33,14 +39,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install arduino-cli
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Install the AVR core and the VL53L0X library
+        run: |
+          arduino-cli version
+          arduino-cli core update-index
+          arduino-cli core install arduino:avr
+          arduino-cli lib install VL53L0X
+
+      # --library . でこのリポジトリのライブラリを使う (Library Manager の版ではなく、この commit)。
       - name: Compile all examples
-        uses: arduino/compile-sketches@v1
-        with:
-          fqbn: ${{ matrix.fqbn }}
-          libraries: |
-            - source-path: ./
-            - name: VL53L0X
-          sketch-paths: |
-            - examples
-          enable-warnings-report: true
-          verbose: false
+        run: |
+          set -e
+          for sketch in examples/*/; do
+            echo "::group::${sketch}"
+            arduino-cli compile --fqbn "${{ matrix.fqbn }}" --library . --warnings all "${sketch}"
+            echo "::endgroup::"
+          done
