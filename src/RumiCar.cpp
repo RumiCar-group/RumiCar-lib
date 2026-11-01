@@ -281,10 +281,16 @@ int RC_drive(int direc, int ipwm){
   return 1;
 }
 
+// RC_read が信用する距離の上限 [mm]。VL53L0X は 2 m まで測れるが、レーザーが
+// コーン状に広がるため、RumiCar の搭載位置では 20 cm より先で地面を捉える
+// ことがある。これを超える値は信用せず -3 (範囲外) にする。
+// -3 は「20 cm 以内に何もない」の意味で、走行のロジックでは開放として扱う。
+#define RC_READ_MAX_MM 200
+
 // 距離測定関数: 指定方向のセンサで距離を取得
 // direc: LEFT / CENTER / RIGHT / REAR
-// 戻り値: 0-2000=mm距離(正常), -1=タイムアウト(REARではリア非搭載車も含む),
-//         -2=引数エラー, -3=範囲外/信号品質低下
+// 戻り値: 0-200=mm距離(正常), -1=タイムアウト(REARではリア非搭載車も含む),
+//         -2=引数エラー, -3=範囲外(200mm超)/信号品質低下
 int RC_read(int direc)
 {
   VL53L0X *sensor;
@@ -308,9 +314,9 @@ int RC_read(int direc)
     return -1;  // タイムアウト
   }
 
-  if (raw > 2000) {
-    return -3;  // 範囲外/信号品質低下
+  if (raw > RC_READ_MAX_MM) {
+    return -3;  // 範囲外(200mm超)/信号品質低下
   }
 
-  return (int)raw;  // 正常値 (0-2000mm)
+  return (int)raw;  // 正常値 (0-200mm)
 }
