@@ -48,20 +48,30 @@ Pin assignments for each board are defined in `src/RumiCar.h`.
 void RC_setup();                       // Initialize sensors and motors. Call once in setup().
 int  RC_steer(int direc);              // Set steering direction. direc in {LEFT, CENTER, RIGHT}.
 int  RC_drive(int direc, int ipwm);    // Set drive motor. direc in {FREE, REVERSE, FORWARD, BRAKE}, ipwm 0..255.
-int  RC_read (int direc);              // Read distance from a sensor. direc in {LEFT, CENTER, RIGHT, REAR}.
+int  RC_read (int direc);              // Read distance from a sensor. direc in {LEFT, CENTER, RIGHT, REAR}. 0..200 mm, or -1/-2/-3.
 ```
 
 ### `RC_read()` return value
 
 | Return value | Meaning |
 |---|---|
-| `0` .. `2000` | Measured distance in mm (normal range). |
+| `0` .. `200` | Measured distance in mm. |
 | `-1` | Timeout (sensor did not respond). For `REAR`, also returned on vehicles that have no rear sensor fitted. |
 | `-2` | Invalid argument (`direc` was not LEFT/CENTER/RIGHT/REAR). |
-| `-3` | Out of range or low signal quality (raw value above 2000 mm). |
+| `-3` | Out of range: nothing within 20 cm (raw value above 200 mm, including "no target"), or low signal quality. |
+
+The VL53L0X can measure up to 2 m, but its beam spreads out in a cone and, where it is mounted
+on the RumiCar, it tends to pick up the floor beyond about 20 cm. `RC_read()` therefore does not
+trust readings above 200 mm and returns `-3` instead (since v0.5.1; up to v0.5.0 the limit was
+2000 mm). `-3` means "nothing within 20 cm" and driving logic should treat it as open road.
+Note that `-3` is the *smallest* value numerically: a plain `if (d < 100)` would take it for
+"very close", so map it to a large value before comparing (`if (d == -3) d = 999;`). `-1` (no
+reading) is different from `-3` and should not be treated as open road.
+The same API, values and return codes are used by the Python library for the Raspberry Pi CM
+(`RasPi/RumiCar.py` in [RumiCar-group/RumiCar](https://github.com/RumiCar-group/RumiCar)).
 
 Negative error codes (`-1`, `-2`, `-3`) keep the Y-axis of the Arduino IDE Serial Plotter
-clean. The 0 .. 2000 mm normal range is preserved while errors are visible as small
+clean. The 0 .. 200 mm normal range is preserved while errors are visible as small
 downward dips.
 
 ### Direct sensor access (legacy / educational)
@@ -179,6 +189,7 @@ Board settings differ by the computer module's USB connector: Type-C modules use
 "ATmega328P" (`arduino:avr:nano:cpu=atmega328`); the older modules with a Mini-USB or Micro-USB connector use
 "ATmega328P (Old Bootloader)" (`arduino:avr:nano:cpu=atmega328old`). Both types use the CH340 USB-serial chip, so the driver is the same.
 
+> v0.5.1 limits `RC_read()` to 200 mm (readings above it return `-3`); the sketches that use `RC_read()` (`Exercise-4.2-Answer`) are adjusted, the others are unchanged.
 > v0.5.0 adds `Exercise-4.1`, `Exercise-4.2` and their `*-Answer` sketches; the earlier sketches are unchanged.
 > Threshold tuning and other improvements after v0.5.0 are released as v0.5.1, v0.5.2, … — Library Manager shows an **Update** button when a new version is available.
 > Please report problems and tuning results as [GitHub Issues](https://github.com/RumiCar-group/RumiCar-lib/issues).

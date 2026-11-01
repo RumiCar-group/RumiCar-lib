@@ -34,7 +34,7 @@ const int           ESCAPE_PWM     = 200;   // 切り返しの速さ
 const unsigned long BACK_MS        = 600;   // 後退する時間 [ms]
 const unsigned long FWD_MS         = 400;   // 前進する時間 [ms]
 const int           ESCAPE_TRIES   = 3;     // 切り返しの最大回数
-const int           CLEAR_MM       = 250;   // 前がこれ以上開いたら脱出成功
+const int           CLEAR_MM       = 200;   // 前がこれ以上開いたら脱出成功（RC_read は 200 mm までしか返さない）
 const int           REAR_STOP_MM   = 80;    // 後方センサーがある車体：後ろがこれより近ければ後退をやめる
 const unsigned long COOLDOWN_MS    = 2000;  // 脱出のあと、再びはまりを判定しない時間 [ms]
 
@@ -53,6 +53,7 @@ void setup()
 }
 
 // 距離が測れなかったとき（-1 や -3）は「遠い」として扱う（3.2 の 8190 と同じ考え方）
+// RC_read は 20 cm より先を -3（範囲外）にするので、-3 は「20 cm 以内に何もない」
 int farIfInvalid(int d)
 {
   return (d < 0) ? 9999 : d;
@@ -183,7 +184,7 @@ void driveLikeExercise32(int s0, int s1, int s2)
     driveAndCount(REVERSE, PWM_SLOW);
   } else if (d1 < 150) {
     driveAndCount(FORWARD, PWM_SLOW);
-  } else if (d1 < 250) {
+  } else if (d1 < 200) {
     driveAndCount(FORWARD, PWM_MID);
   } else {
     driveAndCount(FORWARD, PWM_FAST);
