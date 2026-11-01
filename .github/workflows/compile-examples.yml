@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   compile:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # ubuntu-latest (26.04) には compile-sketches@v1 が要求する Python 3.12.4 が無い (2026-11-01)
     strategy:
       fail-fast: false
       matrix:
