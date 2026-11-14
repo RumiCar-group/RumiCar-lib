@@ -46,10 +46,28 @@ Pin assignments for each board are defined in `src/RumiCar.h`.
 
 ```cpp
 void RC_setup();                       // Initialize sensors and motors. Call once in setup().
-int  RC_steer(int direc);              // Set steering direction. direc in {LEFT, CENTER, RIGHT}.
+int  RC_steer(int direc, int ipwm = 255); // Set steering. direc in {LEFT, CENTER, RIGHT}, ipwm = strength 0..255 (optional).
 int  RC_drive(int direc, int ipwm);    // Set drive motor. direc in {FREE, REVERSE, FORWARD, BRAKE}, ipwm 0..255.
 int  RC_read (int direc);              // Read distance from a sensor. direc in {LEFT, CENTER, RIGHT, REAR}. 0..200 mm, or -1/-2/-3.
 ```
+
+### `RC_steer()` strength
+
+`RC_steer(direc)` works as before. Since v0.6.0 an optional second argument sets the steering
+strength: `RC_steer(RIGHT, 128)`.
+
+| `ipwm` | Output |
+|---|---|
+| `255` (or omitted) | Full strength, exactly the same output as `RC_steer(direc)` in earlier versions. |
+| `1` .. `254` | Slow decay: for `RIGHT`, AIN1 is held HIGH and AIN2 gets `255 - ipwm`; for `LEFT`, the opposite. |
+| `0` | Same as `CENTER` (both inputs 0, neutral). |
+
+- The strength is the proportion of the signal (0..255) and is not compensated; values outside
+  0..255 are clamped. It is ignored for `CENTER`.
+- The return value is unchanged: `1` for `LEFT`/`CENTER`/`RIGHT`, `0` for any other `direc`.
+- The steering is a DC motor, not a servo, so how far the wheels turn for a given strength depends
+  on the vehicle (and on the battery). Treat the value as a relative guide — "about 30 % more",
+  "half" — and adjust it while watching how the car responds (see `Exercise-2.5` and `Exercise-3.3`).
 
 ### `RC_read()` return value
 
@@ -69,6 +87,8 @@ Note that `-3` is the *smallest* value numerically: a plain `if (d < 100)` would
 reading) is different from `-3` and should not be treated as open road.
 The same API, values and return codes are used by the Python library for the Raspberry Pi CM
 (`RasPi/RumiCar.py` in [RumiCar-group/RumiCar](https://github.com/RumiCar-group/RumiCar)).
+The second argument of `RC_steer()` (v0.6.0) is being added to the Python library and the
+simulator as well.
 
 Negative error codes (`-1`, `-2`, `-3`) keep the Y-axis of the Arduino IDE Serial Plotter
 clean. The 0 .. 200 mm normal range is preserved while errors are visible as small
@@ -163,8 +183,10 @@ improves a sketch together with an AI coding agent (see below).
 | `Exercise-2.2` | Drive forward at three different PWM speeds. |
 | `Exercise-2.3` | Alternate forward and reverse. |
 | `Exercise-2.4` | Zigzag motion combining drive and steering. |
+| `Exercise-2.5` | Change the steering strength: alternate right and left at full strength (255) and at half strength (128). |
 | `Exercise-3.1` | Stop safely: distance-based control using the center sensor. |
 | `Exercise-3.2` | Drive down a street: autonomous control using all three sensors. |
+| `Exercise-3.3` | Drive smoothly: instead of always steering left or right as in Exercise-3.2, go straight when the left and right distances are close, and adjust the steering strength (1.3 times when it is not enough, half when the car swings past the middle). |
 | `Exercise-4.1` | Starting point for the AI exercise "forward and reverse without slipping": the same code as Exercise-2.3, plus `AGENTS.md`. |
 | `Exercise-4.1-Answer` | One answer: ramp the PWM up and down and brake before changing direction. |
 | `Exercise-4.2` | Starting point for the AI exercise "a car that backs out when it gets stuck": the same code as Exercise-3.2, plus `AGENTS.md`. |
@@ -189,6 +211,7 @@ Board settings differ by the computer module's USB connector: Type-C modules use
 "ATmega328P" (`arduino:avr:nano:cpu=atmega328`); the older modules with a Mini-USB or Micro-USB connector use
 "ATmega328P (Old Bootloader)" (`arduino:avr:nano:cpu=atmega328old`). Both types use the CH340 USB-serial chip, so the driver is the same.
 
+> v0.6.0 adds an optional second argument (strength) to `RC_steer()` and the sketches `Exercise-2.5` and `Exercise-3.3`; the other sketches are unchanged.
 > v0.5.1 limits `RC_read()` to 200 mm (readings above it return `-3`); the sketches that use `RC_read()` (`Exercise-4.2-Answer`) are adjusted, the others are unchanged.
 > v0.5.0 adds `Exercise-4.1`, `Exercise-4.2` and their `*-Answer` sketches; the earlier sketches are unchanged.
 > Threshold tuning and other improvements after v0.5.0 are released as v0.5.1, v0.5.2, … — Library Manager shows an **Update** button when a new version is available.

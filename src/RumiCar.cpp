@@ -215,13 +215,27 @@ void RC_setup()
 
 }
 //操舵の関数
-int RC_steer (int direc ){
-  if ( direc == RIGHT ){
-    RC_analogWrite(AIN1,255);
-    RC_analogWrite(AIN2,0);
-  }else if ( direc == LEFT ){
-    RC_analogWrite(AIN1,0);
-    RC_analogWrite(AIN2,255);
+// ipwm は操舵の強さ = 信号の割合 (0-255、補正なし)。既定値 255 は宣言 (RumiCar.h) にだけある。
+//   255 (と第1引数だけの呼び出し) : 従来と同じ出力 (RIGHT: AIN1=255,AIN2=0 / LEFT: その逆)
+//   1-254 : スローデケイ。RIGHT は AIN1 を HIGH 固定し AIN2 = 255-s、LEFT はその逆
+//           (走行モータの driveSlowDecay と同じ考え方。s=255 で上の従来出力と一致する)
+//   0     : CENTER と同じ (両入力 0 = 中立)
+// CENTER のときは ipwm を無視する。戻り値は従来どおり (1=実行, 0=未知の方向)。
+int RC_steer (int direc, int ipwm){
+  if ( ipwm < 0 )   ipwm = 0;    // 入力ガード
+  if ( ipwm > 255 ) ipwm = 255;
+
+  if ( direc == RIGHT || direc == LEFT ){
+    if ( ipwm == 0 ){
+      RC_analogWrite(AIN1,0);    // 強さ 0 = CENTER と同じ
+      RC_analogWrite(AIN2,0);
+    }else if ( direc == RIGHT ){
+      RC_analogWrite(AIN1,255);
+      RC_analogWrite(AIN2,255 - ipwm);
+    }else{ // LEFT (書き込み順は従来と同じ AIN1 → AIN2)
+      RC_analogWrite(AIN1,255 - ipwm);
+      RC_analogWrite(AIN2,255);
+    }
   }else if ( direc == CENTER ){
     RC_analogWrite(AIN1,0);
     RC_analogWrite(AIN2,0);
