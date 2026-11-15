@@ -85,10 +85,14 @@ trust readings above 200 mm and returns `-3` instead (since v0.5.1; up to v0.5.0
 Note that `-3` is the *smallest* value numerically: a plain `if (d < 100)` would take it for
 "very close", so map it to a large value before comparing (`if (d == -3) d = 999;`). `-1` (no
 reading) is different from `-3` and should not be treated as open road.
-The same API, values and return codes are used by the Python library for the Raspberry Pi CM
-(`RasPi/RumiCar.py` in [RumiCar-group/RumiCar](https://github.com/RumiCar-group/RumiCar)).
-The second argument of `RC_steer()` (v0.6.0) is being added to the Python library and the
-simulator as well.
+The same API, values and return codes, including the strength argument of `RC_steer()`
+(v0.6.0), are used by the Python library for the Raspberry Pi CM (`RasPi/RumiCar.py` 0.6.0 in
+[RumiCar-group/RumiCar](https://github.com/RumiCar-group/RumiCar)), by
+[RumiCar-Zero2Cam](https://github.com/RumiCar-group/RumiCar-Zero2Cam), which runs your
+`drive.py` with that same `RumiCar.py`, and by the
+[RumiCar Simulator](https://github.com/RumiCar-group/RumiCar-Simulator). A strength of `128`
+means a signal of 128/255 on each of them; the PWM frequency differs by computer module, and the
+steering angle a value gives differs by vehicle.
 
 Negative error codes (`-1`, `-2`, `-3`) keep the Y-axis of the Arduino IDE Serial Plotter
 clean. The 0 .. 200 mm normal range is preserved while errors are visible as small
