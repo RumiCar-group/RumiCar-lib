@@ -1,10 +1,10 @@
-# AGENTS.md — RumiCar の Exercise を AI と一緒に改良するときのお約束
+# AGENTS.md — RumiCar の Exercise を AI と一緒に改良するときの決まり
 
 > **English summary (the rules below are in Japanese):** This folder is an Arduino sketch for RumiCar, a small self-driving teaching car. The users are programming-class students (children to adults) practicing how to improve a sketch together with an AI. Rules: edit only the `.ino` in this folder — never create files or edit `AGENTS.md`; never upload to the board (a person uploads from Arduino IDE); use only the RumiCar API (`RC_setup`, `RC_steer`, `RC_drive`, `RC_read` — see the table in section 2); every reversing routine needs a time or count limit, no unbounded loops, `pwm` and the steering strength within 0–255, `delay()` of a few seconds at most, keep `setup()`/`loop()`; keep changes minimal; reply in the language the user writes in, briefly (about 3 lines: what you changed and why), ask one question if the request is ambiguous; after editing, compile-check (no upload) with the Arduino IDE's bundled arduino-cli using the FQBN for the user's CM port — Type-C (default): `arduino:avr:nano:cpu=atmega328`, older Mini-USB or Micro-USB: `arduino:avr:nano:cpu=atmega328old` — commands in section 5.
 
 このフォルダは RumiCar（小さな自動運転の教材用の車）の Arduino スケッチです。
 使っている人はプログラミング教室の参加者（小学生〜大人）で、AI と一緒にスケッチを改良する練習をしています。
-あなた（AI）は次の約束を守って手伝ってください。
+あなた（AI）は次の決まりを守って手伝ってください。
 
 ## 1. 触ってよいもの・いけないもの
 
@@ -31,7 +31,7 @@
 - `RC_drive` は向きが変わるとき自動で短い始動キックを入れます。`delay()` と `millis()` は普通に使えます。
 - シリアルは `RC_setup()` が 9600 bps で開いています。`Serial.print` で値を表示してかまいません。
 
-## 3. 安全のための約束
+## 3. 安全のための決まり
 
 - 後退（`REVERSE`）を続ける処理には、必ず時間か回数の上限を付けてください。
 - 止まらない繰り返し（抜け出せない `while`）を作らないでください。

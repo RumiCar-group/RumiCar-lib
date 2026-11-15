@@ -215,6 +215,7 @@ Board settings differ by the computer module's USB connector: Type-C modules use
 "ATmega328P" (`arduino:avr:nano:cpu=atmega328`); the older modules with a Mini-USB or Micro-USB connector use
 "ATmega328P (Old Bootloader)" (`arduino:avr:nano:cpu=atmega328old`). Both types use the CH340 USB-serial chip, so the driver is the same.
 
+> v0.6.1 changes only wording in `AGENTS.md` and the comments of `Exercise-4.1`/`Exercise-4.2` (Japanese text in a plain adult style, matching the hands-on text); the code is unchanged.
 > v0.6.0 adds an optional second argument (strength) to `RC_steer()` and the sketches `Exercise-2.5` and `Exercise-3.3`; the other sketches are unchanged.
 > v0.5.1 limits `RC_read()` to 200 mm (readings above it return `-3`); the sketches that use `RC_read()` (`Exercise-4.2-Answer`) are adjusted, the others are unchanged.
 > v0.5.0 adds `Exercise-4.1`, `Exercise-4.2` and their `*-Answer` sketches; the earlier sketches are unchanged.
