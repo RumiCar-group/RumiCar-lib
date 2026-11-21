@@ -48,7 +48,9 @@ Pin assignments for each board are defined in `src/RumiCar.h`.
 void RC_setup();                       // Initialize sensors and motors. Call once in setup().
 int  RC_steer(int direc, int ipwm = 255); // Set steering. direc in {LEFT, CENTER, RIGHT}, ipwm = strength 0..255 (optional).
 int  RC_drive(int direc, int ipwm);    // Set drive motor. direc in {FREE, REVERSE, FORWARD, BRAKE}, ipwm 0..255.
-int  RC_read (int direc);              // Read distance from a sensor. direc in {LEFT, CENTER, RIGHT, REAR}. 0..200 mm, or -1/-2/-3.
+int  RC_read (int direc);              // Read distance from a sensor. direc in {LEFT, CENTER, RIGHT, REAR}. 0..limit mm, or -1/-2/-3.
+int  RC_setReadLimit(int limitMm);     // Set the distance limit of RC_read for all sensors. 1..2000 mm, 0 = no limit.
+int  RC_setReadLimit(int direc, int limitMm); // Same, for one sensor only. direc in {LEFT, CENTER, RIGHT, REAR}.
 ```
 
 ### `RC_steer()` strength
@@ -73,30 +75,81 @@ strength: `RC_steer(RIGHT, 128)`.
 
 | Return value | Meaning |
 |---|---|
-| `0` .. `200` | Measured distance in mm. |
+| `0` .. limit | Measured distance in mm. The limit is 2000 mm by default (the maximum range of the VL53L0X), or the value set with `RC_setReadLimit()`. |
 | `-1` | Timeout (sensor did not respond). For `REAR`, also returned on vehicles that have no rear sensor fitted. |
 | `-2` | Invalid argument (`direc` was not LEFT/CENTER/RIGHT/REAR). |
-| `-3` | Out of range: nothing within 20 cm (raw value above 200 mm, including "no target"), or low signal quality. |
+| `-3` | Out of range: above the limit, no target (the sensor reports about 8190), or low signal quality. |
 
-The VL53L0X can measure up to 2 m, but its beam spreads out in a cone and, where it is mounted
-on the RumiCar, it tends to pick up the floor beyond about 20 cm. `RC_read()` therefore does not
-trust readings above 200 mm and returns `-3` instead (since v0.5.1; up to v0.5.0 the limit was
-2000 mm). `-3` means "nothing within 20 cm" and driving logic should treat it as open road.
+`-3` means "farther than the limit" and driving logic should treat it as open road.
 Note that `-3` is the *smallest* value numerically: a plain `if (d < 100)` would take it for
 "very close", so map it to a large value before comparing (`if (d == -3) d = 999;`). `-1` (no
 reading) is different from `-3` and should not be treated as open road.
+
+Negative error codes (`-1`, `-2`, `-3`) keep the Y-axis of the Arduino IDE Serial Plotter
+clean. The normal range (0 .. limit) is preserved while errors are visible as small
+downward dips.
+
+### `RC_setReadLimit()`
+
+The VL53L0X can measure up to 2 m, but its beam spreads out in a cone, so depending on where it
+is mounted it can pick up the floor at a distance and report it as an obstacle. How far a reading
+can be trusted is decided by your program, not by the library: call `RC_setReadLimit()` once in
+`setup()`, right after `RC_setup()` (see "Choosing the limit" below for an example and how to
+choose the value). Readings above the limit are returned by `RC_read()` as `-3` (far).
+
+| Item | Description |
+|---|---|
+| `RC_setReadLimit(limitMm)` | Sets the same limit for all sensors (LEFT, CENTER, RIGHT, REAR). |
+| `RC_setReadLimit(direc, limitMm)` | Sets the limit for one sensor only (`LEFT`, `CENTER`, `RIGHT` or `REAR`). |
+| `limitMm` | `1` .. `2000` mm. `0` means no limit (back to the default, up to 2000 mm). Values outside `0` .. `2000` are clamped, as with the strength of `RC_steer()`. |
+| Effect | `RC_read()` returns `-3` when the reading is above the limit of that sensor. Readings at or below the limit, `-1` and `-2` are unchanged. |
+| Default | No limit: right after `RC_setup()`, `RC_read()` returns up to 2000 mm. |
+| Return value | `1` when the limit was set, `0` when `direc` is invalid (nothing is changed). |
+| Raw readings | `sensorN.readRangeSingleMillimeters()` is not affected. |
+
+Write the value in one place only: the `RC_setReadLimit()` line in `setup()`. Keep the distance
+thresholds of your driving logic at or below that limit, and say so in a comment, so that changing
+the limit later means changing that one line. `REAR` can be set on a vehicle without a rear sensor;
+`RC_read(REAR)` then still returns `-1`.
+
+### Choosing the limit
+
+This is the only place in this README that gives a value for the limit; the rest of the
+documentation refers to "the limit set with `RC_setReadLimit()`".
+
+- **Recommended example: 200 mm.** The hands-on text states that the RumiCar model 32 picks up
+  the floor at about 30 cm; 200 mm leaves a margin below that. `Exercise-3.3` and
+  `Exercise-4.2-Answer` use this value, which gives exactly the same readings as v0.5.1 .. v0.6.1.
+
+  ```cpp
+  void setup()
+  {
+    RC_setup();
+    RC_setReadLimit(200);   // the distance RC_read trusts [mm]; beyond it RC_read returns -3 (far)
+  }
+  ```
+
+- **Check it on your own car.** The distance at which the floor appears depends on the vehicle,
+  the mounting height and the floor. Place the car on the floor with nothing in front of it and
+  watch the readings in the Serial Plotter with `Exercise-1.2`, which prints the raw readings of the
+  three sensors (not affected by the limit): a distance that shows up instead of about 8190 (no
+  target) is where the floor is seen. Choose a limit with some margin below it.
+- **Per sensor if needed.** The left and right sensors point forward at an angle, so the distance
+  at which they see the floor may differ from the center sensor (not yet measured). If it does, set
+  them separately with `RC_setReadLimit(LEFT, …)` and so on.
+
+### Other RumiCar environments
+
 The same API, values and return codes, including the strength argument of `RC_steer()`
-(v0.6.0), are used by the Python library for the Raspberry Pi CM (`RasPi/RumiCar.py` 0.6.0 in
+(v0.6.0), are used by the Python library for the Raspberry Pi CM (`RasPi/RumiCar.py` in
 [RumiCar-group/RumiCar](https://github.com/RumiCar-group/RumiCar)), by
 [RumiCar-Zero2Cam](https://github.com/RumiCar-group/RumiCar-Zero2Cam), which runs your
 `drive.py` with that same `RumiCar.py`, and by the
 [RumiCar Simulator](https://github.com/RumiCar-group/RumiCar-Simulator). A strength of `128`
 means a signal of 128/255 on each of them; the PWM frequency differs by computer module, and the
-steering angle a value gives differs by vehicle.
-
-Negative error codes (`-1`, `-2`, `-3`) keep the Y-axis of the Arduino IDE Serial Plotter
-clean. The 0 .. 200 mm normal range is preserved while errors are visible as small
-downward dips.
+steering angle a value gives differs by vehicle. `RC_setReadLimit()` and the 2000 mm default are
+being added to them with the same name and meaning (`RumiCar.py` 0.7.0, Zero2Cam 0.7.0,
+Simulator v12.0.0); until those versions are released, they still limit `RC_read()` to 200 mm.
 
 ### Direct sensor access (legacy / educational)
 
@@ -104,6 +157,8 @@ The distance sensors are also exposed as global `VL53L0X` objects: `sensor0` (LE
 `sensor1` (CENTER), `sensor2` (RIGHT), and `sensor3` (REAR, optional). Educational sketches in
 `examples/` use this longer form (`sensor1.readRangeSingleMillimeters()`) on purpose, so learners
 experience the underlying API before discovering the simpler `RC_read(CENTER)` alternative.
+These raw readings are not affected by `RC_setReadLimit()`: they return values above the limit
+as they are, and about 8190 when there is no target.
 
 Prefer `RC_read(REAR)` over `sensor3` directly: `RC_read` returns `-1` when no rear sensor is
 fitted, whereas reading `sensor3` directly on a rear-less vehicle yields an undefined value.
@@ -154,7 +209,7 @@ To avoid name collisions, **do not redefine or reuse the following names** in yo
 
 ### Functions
 
-`RC_setup`, `RC_steer`, `RC_drive`, `RC_read`
+`RC_setup`, `RC_steer`, `RC_drive`, `RC_read`, `RC_setReadLimit`
 
 ### Library-managed state (side effects of `RC_setup()`)
 
@@ -215,6 +270,7 @@ Board settings differ by the computer module's USB connector: Type-C modules use
 "ATmega328P" (`arduino:avr:nano:cpu=atmega328`); the older modules with a Mini-USB or Micro-USB connector use
 "ATmega328P (Old Bootloader)" (`arduino:avr:nano:cpu=atmega328old`). Both types use the CH340 USB-serial chip, so the driver is the same.
 
+> v0.7.0 removes the fixed 200 mm limit of `RC_read()`: by default it returns 0 .. 2000 mm again, as up to v0.5.0, and the program decides how far to trust the readings with the new `RC_setReadLimit()` (see "Choosing the limit"). `Exercise-3.3` and `Exercise-4.2-Answer` call `RC_setReadLimit(200)` in `setup()` and behave exactly as in v0.6.1; the other sketches are unchanged. A sketch of your own that uses `RC_read()` and relied on the 200 mm limit needs the same line added to `setup()`.
 > v0.6.1 changes only wording in `AGENTS.md` and the comments of `Exercise-4.1`/`Exercise-4.2` (Japanese text in a plain adult style, matching the hands-on text); the code is unchanged.
 > v0.6.0 adds an optional second argument (strength) to `RC_steer()` and the sketches `Exercise-2.5` and `Exercise-3.3`; the other sketches are unchanged.
 > v0.5.1 limits `RC_read()` to 200 mm (readings above it return `-3`); the sketches that use `RC_read()` (`Exercise-4.2-Answer`) are adjusted, the others are unchanged.

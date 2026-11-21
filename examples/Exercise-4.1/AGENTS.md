@@ -1,6 +1,6 @@
 # AGENTS.md — RumiCar の Exercise を AI と一緒に改良するときの決まり
 
-> **English summary (the rules below are in Japanese):** This folder is an Arduino sketch for RumiCar, a small self-driving teaching car. The users are programming-class students (children to adults) practicing how to improve a sketch together with an AI. Rules: edit only the `.ino` in this folder — never create files or edit `AGENTS.md`; never upload to the board (a person uploads from Arduino IDE); use only the RumiCar API (`RC_setup`, `RC_steer`, `RC_drive`, `RC_read` — see the table in section 2); every reversing routine needs a time or count limit, no unbounded loops, `pwm` and the steering strength within 0–255, `delay()` of a few seconds at most, keep `setup()`/`loop()`; keep changes minimal; reply in the language the user writes in, briefly (about 3 lines: what you changed and why), ask one question if the request is ambiguous; after editing, compile-check (no upload) with the Arduino IDE's bundled arduino-cli using the FQBN for the user's CM port — Type-C (default): `arduino:avr:nano:cpu=atmega328`, older Mini-USB or Micro-USB: `arduino:avr:nano:cpu=atmega328old` — commands in section 5.
+> **English summary (the rules below are in Japanese):** This folder is an Arduino sketch for RumiCar, a small self-driving teaching car. The users are programming-class students (children to adults) practicing how to improve a sketch together with an AI. Rules: edit only the `.ino` in this folder — never create files or edit `AGENTS.md`; never upload to the board (a person uploads from Arduino IDE); use only the RumiCar API (`RC_setup`, `RC_setReadLimit`, `RC_steer`, `RC_drive`, `RC_read` — see the table in section 2); when using `RC_read`, the distance limit is the value of `RC_setReadLimit` in `setup()` (if it is missing, add it right after `RC_setup()` and ask the user for the value), and new distance thresholds must be at or below that limit; every reversing routine needs a time or count limit, no unbounded loops, `pwm` and the steering strength within 0–255, `delay()` of a few seconds at most, keep `setup()`/`loop()`; keep changes minimal; reply in the language the user writes in, briefly (about 3 lines: what you changed and why), ask one question if the request is ambiguous; after editing, compile-check (no upload) with the Arduino IDE's bundled arduino-cli using the FQBN for the user's CM port — Type-C (default): `arduino:avr:nano:cpu=atmega328`, older Mini-USB or Micro-USB: `arduino:avr:nano:cpu=atmega328old` — commands in section 5.
 
 このフォルダは RumiCar（小さな自動運転の教材用の車）の Arduino スケッチです。
 使っている人はプログラミング教室の参加者（小学生〜大人）で、AI と一緒にスケッチを改良する練習をしています。
@@ -20,13 +20,15 @@
 | 関数 | 意味 |
 |---|---|
 | `RC_setup()` | センサーとモーターの初期化。`setup()` で 1 回呼ぶ（すでに書いてあります） |
+| `RC_setReadLimit(limit)`<br>`RC_setReadLimit(direc, limit)` | `RC_read` が信じる距離の上限 [mm]。`setup()` で `RC_setup()` の次に呼ぶ。上限を超える値は `RC_read` が `-3` にする。`limit` は 1〜2000、`0` は上限なし。`direc`（`LEFT` / `CENTER` / `RIGHT` / `REAR`）を付けるとその方向だけ |
 | `RC_steer(direc)`<br>`RC_steer(direc, pwm)` | ハンドル。`direc` は `LEFT` / `CENTER` / `RIGHT`。`pwm` はハンドルの強さ 0〜255（省略すると 255 でいちばん強い。`0` は `CENTER` と同じ。`CENTER` のときは使わない） |
 | `RC_drive(direc, pwm)` | 走行モーター。`direc` は `FORWARD` / `REVERSE` / `BRAKE` / `FREE`、`pwm` は 0〜255（速さ） |
-| `RC_read(direc)` | 距離 [mm]。`direc` は `LEFT` / `CENTER` / `RIGHT` / `REAR`。戻り値 0〜200 が距離、`-1` は応答なし（後方センサーが無い車体の `REAR` も `-1`）、`-2` は引数エラー、`-3` は範囲外（20 cm 以内に何もない。走行では「遠い」として扱う。`-3` は数としては最小なので、比較の前に大きな値へ置き換える） |
+| `RC_read(direc)` | 距離 [mm]。`direc` は `LEFT` / `CENTER` / `RIGHT` / `REAR`。戻り値 0〜上限 が距離（上限は `setup()` の `RC_setReadLimit` で決めた値）、`-1` は応答なし（後方センサーが無い車体の `REAR` も `-1`）、`-2` は引数エラー、`-3` は範囲外（上限より先。対象物が無いときや信号が弱いときも `-3`。走行では「遠い」として扱う。`-3` は数としては最小なので、比較の前に大きな値へ置き換える） |
 
-- 古い書き方 `sensor0.readRangeSingleMillimeters()`（左）、`sensor1…`（中央）、`sensor2…`（右）も使えます。この書き方では 200 mm を超える値もそのまま返り、遠すぎるときは 8190 前後の大きな値が返ります。どちらの書き方でも「測れなかったとき」の扱いを忘れないでください。
-- 距離センサーは誤差が 1〜2 cm あり、20 cm より先は床を拾うことがあります（そのため `RC_read` は 200 mm を超える値を `-3` にします）。新しく決める判定のしきい値は 200 mm 以内にし、余裕を持たせてください。
-- 古い書き方を `RC_read` に書き換えるときは、200 より大きいしきい値（例：`250`）は成り立たなくなります（`RC_read` は 200 までしか返しません）。そのようなしきい値は 200 以下に直してください。
+- 古い書き方 `sensor0.readRangeSingleMillimeters()`（左）、`sensor1…`（中央）、`sensor2…`（右）も使えます。この書き方は `RC_setReadLimit` の影響を受けず、上限を超える値もそのまま返り、遠すぎるときは 8190 前後の大きな値が返ります。どちらの書き方でも「測れなかったとき」の扱いを忘れないでください。
+- 距離センサーは誤差が 1〜2 cm あり、遠くでは床を拾うことがあります。床を拾わない範囲を `setup()` の `RC_setReadLimit` で上限として決めています。新しく決める判定のしきい値はその上限以下にし、余裕を持たせてください（上限の値を変えても、この決まりはそのままです）。
+- `RC_read` を使うのに `setup()` に `RC_setReadLimit` が無いときは、`RC_setup()` の次の行に追加してください。上限の値は自分で決めずに、人に 1 つ質問して決めてください。
+- 古い書き方を `RC_read` に書き換えるときは、上限より大きいしきい値は成り立たなくなります（上限より先は `-3` になります）。そのようなしきい値は上限以下に直してください。
 - ハンドルはサーボではなく DC モーターなので、強さに対してどれだけ曲がるかは車体や電池で変わります。強さは「3 割増し」「半分」のような目安として使い、効かなければ増やし、行き過ぎたら減らすように決めてください。
 - `RC_drive` は向きが変わるとき自動で短い始動キックを入れます。`delay()` と `millis()` は普通に使えます。
 - シリアルは `RC_setup()` が 9600 bps で開いています。`Serial.print` で値を表示してかまいません。
