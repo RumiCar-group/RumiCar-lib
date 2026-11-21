@@ -7,6 +7,7 @@ int lastGap = 0;        // left/right difference last time [mm]
 void setup()
 {
   RC_setup();
+  RC_setReadLimit(200); // the distance RC_read trusts [mm]. Beyond it RC_read returns -3 (far)
 }
 
 void loop()
@@ -17,7 +18,7 @@ void loop()
   s0=RC_read(LEFT);
   s1=RC_read(CENTER);
   s2=RC_read(RIGHT);
-  if(s0==-3) s0=250;    // -3: nothing within 20 cm = open road
+  if(s0==-3) s0=250;    // -3: farther than the limit = open road (-3 is the smallest number, so replace it first)
   if(s1==-3) s1=250;
   if(s2==-3) s2=250;
 
@@ -35,7 +36,7 @@ void loop()
     return;             // -1: a sensor did not answer, keep driving as before
   }
 
-  if(s1<100){
+  if(s1<100){           // keep these thresholds at or below the limit in setup()
     RC_drive(REVERSE,150);
   }else if (s1<150){
     RC_drive(FORWARD,150);

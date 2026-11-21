@@ -18,6 +18,7 @@ sensor1	KEYWORD2
 sensor2	KEYWORD2
 sensor3	KEYWORD2
 RC_read	KEYWORD2
+RC_setReadLimit	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)

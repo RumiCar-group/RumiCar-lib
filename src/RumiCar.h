@@ -108,6 +108,8 @@ extern VL53L0X sensor3;
 void RC_setup(); //RumiCarのセンサとモータの初期化
 int RC_steer (int direc, int ipwm = 255); //操舵の関数 direc∈{LEFT,CENTER,RIGHT}, ipwm=強さ0-255 (省略時255=従来と同じ, 0=CENTERと同じ, CENTERでは無視)
 int RC_drive(int direc, int ipwm); //走行の関数
-int RC_read (int direc); //測距の関数 direc∈{LEFT,CENTER,RIGHT,REAR} (戻り値: 0-200=mm距離, -1=タイムアウト, -2=引数エラー, -3=範囲外(200mm超)/信号品質低下)
+int RC_read (int direc); //測距の関数 direc∈{LEFT,CENTER,RIGHT,REAR} (戻り値: 0-上限=mm距離, -1=タイムアウト, -2=引数エラー, -3=範囲外(上限超)/信号品質低下。上限は既定2000、RC_setReadLimitで設定)
+int RC_setReadLimit (int limitMm); //RC_readの上限[mm]を全方向に設定 (1-2000, 0=上限なし, 範囲外は0-2000に収める。戻り値: 1)
+int RC_setReadLimit (int direc, int limitMm); //RC_readの上限[mm]を指定方向だけ設定 direc∈{LEFT,CENTER,RIGHT,REAR} (戻り値: 1=設定, 0=方向が不正)
 
 #endif /* RumiCar_h */

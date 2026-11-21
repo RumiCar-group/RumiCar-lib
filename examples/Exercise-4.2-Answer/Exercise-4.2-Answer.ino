@@ -25,7 +25,7 @@ const unsigned long FLIP_WINDOW_MS = 3000;  // (1) この時間の中で
 const int           FLIP_LIMIT     = 4;     // (1) 前後が何回入れ替わったら「はまり」か
 const unsigned long STALL_CHECK_MS = 1000;  // (2) 前の距離を比べる間隔 [ms]
 const int           STALL_DELTA_MM = 20;    // (2) これより変化が小さければ「進んでいない」（測距誤差 1〜2cm を考慮）
-const int           STALL_NEAR_MM  = 200;   // (2) 前がこれより近いときだけ判定する（遠い壁は見ない）
+const int           STALL_NEAR_MM  = 200;   // (2) 前がこれより近いときだけ判定する（遠い壁は見ない。上限（RC_setReadLimit）以下にする）
 const int           STALL_LIMIT    = 2;     // (2) 何回続いたら「はまり」か（最初の 1 回は比べる相手が無いので検知まで約 3 秒）
 const int           CORNER_MM      = 120;   // (3) 前・左・右がすべてこれ未満なら角に入っている
 
@@ -34,7 +34,7 @@ const int           ESCAPE_PWM     = 200;   // 切り返しの速さ
 const unsigned long BACK_MS        = 600;   // 後退する時間 [ms]
 const unsigned long FWD_MS         = 400;   // 前進する時間 [ms]
 const int           ESCAPE_TRIES   = 3;     // 切り返しの最大回数
-const int           CLEAR_MM       = 200;   // 前がこれ以上開いたら脱出成功（RC_read は 200 mm までしか返さない）
+const int           CLEAR_MM       = 200;   // 前がこれ以上開いたら脱出成功（上限（RC_setReadLimit）以下にする）
 const int           REAR_STOP_MM   = 80;    // 後方センサーがある車体：後ろがこれより近ければ後退をやめる
 const unsigned long COOLDOWN_MS    = 2000;  // 脱出のあと、再びはまりを判定しない時間 [ms]
 
@@ -50,10 +50,11 @@ unsigned long cooldownEnd = 0;      // 脱出のあと、この時刻までは�
 void setup()
 {
   RC_setup();
+  RC_setReadLimit(200);   // 信じる距離の上限 [mm]。これより先は -3（遠い）。上のしきい値はこの値以下にする
 }
 
 // 距離が測れなかったとき（-1 や -3）は「遠い」として扱う（3.2 の 8190 と同じ考え方）
-// RC_read は 20 cm より先を -3（範囲外）にするので、-3 は「20 cm 以内に何もない」
+// RC_read は上限（setup() の RC_setReadLimit）より先を -3（範囲外）にするので、-3 は「上限より手前に何もない」
 int farIfInvalid(int d)
 {
   return (d < 0) ? 9999 : d;

@@ -295,16 +295,55 @@ int RC_drive(int direc, int ipwm){
   return 1;
 }
 
-// RC_read が信用する距離の上限 [mm]。VL53L0X は 2 m まで測れるが、レーザーが
-// コーン状に広がるため、RumiCar の搭載位置では 20 cm より先で地面を捉える
-// ことがある。これを超える値は信用せず -3 (範囲外) にする。
-// -3 は「20 cm 以内に何もない」の意味で、走行のロジックでは開放として扱う。
-#define RC_READ_MAX_MM 200
+// RC_read が返す距離の最大 [mm]。VL53L0X の仕様上の最大測距距離。
+// これを超える値 (反射光が戻らないときの 8190 前後を含む) は -3 (範囲外) にする。
+#define RC_READ_MAX_MM 2000
+
+// RC_read が信じる距離の上限 [mm]。方向ごとに持つ (添字は LEFT=0, CENTER=1,
+// RIGHT=2, REAR=3)。0 は上限なし (RC_READ_MAX_MM まで返す) で、これが既定。
+// レーザーはコーン状に広がるため、搭載位置によっては遠くで床を拾う。どこまでの
+// 値を信じるかはプログラムが RC_setReadLimit で決める (ライブラリは決めない)。
+static uint16_t readLimitMm[4] = {0, 0, 0, 0};
+
+// 上限の値を 0-RC_READ_MAX_MM に収める (RC_steer の強さと同じく、範囲外は丸める)
+static uint16_t clampReadLimit(int limitMm)
+{
+  if (limitMm < 0)              limitMm = 0;
+  if (limitMm > RC_READ_MAX_MM) limitMm = RC_READ_MAX_MM;
+  return (uint16_t)limitMm;
+}
+
+// RC_read の上限を設定する関数 (前・左・右・後ろのすべてに同じ上限)
+// limitMm: 1-2000 [mm]。0 は上限なし。範囲外の値は 0-2000 に収める。
+// 戻り値: 1 (設定した)
+int RC_setReadLimit(int limitMm)
+{
+  uint16_t limit = clampReadLimit(limitMm);
+  for (int i = 0; i < 4; i++) {
+    readLimitMm[i] = limit;
+  }
+  return 1;
+}
+
+// RC_read の上限を設定する関数 (指定した方向だけ)
+// direc: LEFT / CENTER / RIGHT / REAR。limitMm は上と同じ。
+// 戻り値: 1 (設定した), 0 (方向が不正。何も変えない)
+// REAR はリア非搭載車でも設定できる (RC_read(REAR) は -1 のまま)。
+int RC_setReadLimit(int direc, int limitMm)
+{
+  if (direc != LEFT && direc != CENTER && direc != RIGHT && direc != REAR) {
+    return 0;
+  }
+  readLimitMm[direc] = clampReadLimit(limitMm);
+  return 1;
+}
 
 // 距離測定関数: 指定方向のセンサで距離を取得
 // direc: LEFT / CENTER / RIGHT / REAR
-// 戻り値: 0-200=mm距離(正常), -1=タイムアウト(REARではリア非搭載車も含む),
-//         -2=引数エラー, -3=範囲外(200mm超)/信号品質低下
+// 戻り値: 0-上限=mm距離(正常。上限は既定 2000、RC_setReadLimit で設定した場合はその値),
+//         -1=タイムアウト(REARではリア非搭載車も含む), -2=引数エラー,
+//         -3=範囲外(上限超、8190 前後の対象物未検出を含む)/信号品質低下
+// -3 は数としては最小なので、走行のロジックでは比較の前に「遠い」に置き換える。
 int RC_read(int direc)
 {
   VL53L0X *sensor;
@@ -329,8 +368,13 @@ int RC_read(int direc)
   }
 
   if (raw > RC_READ_MAX_MM) {
-    return -3;  // 範囲外(200mm超)/信号品質低下
+    return -3;  // 範囲外(2000mm超、対象物未検出)/信号品質低下
   }
 
-  return (int)raw;  // 正常値 (0-200mm)
+  uint16_t limit = readLimitMm[direc];
+  if (limit != 0 && raw > limit) {
+    return -3;  // RC_setReadLimit で決めた上限を超える
+  }
+
+  return (int)raw;  // 正常値 (0-上限 mm)
 }
