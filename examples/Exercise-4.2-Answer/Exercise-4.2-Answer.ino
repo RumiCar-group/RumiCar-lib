@@ -15,6 +15,10 @@
 //     決めた回数で抜けられなければ止まって待ち、前が開いたら走行を再開します。
 //   数値はすべて目安です。自分の車体とコースに合わせて変えてみましょう。
 
+// ---- 距離の扱い ----
+const int LIMIT_MM   = 200;   // RC_read が信じる距離の上限 [mm]。これより先は -3（範囲外）。下のしきい値はこの値以下にする
+const int FAR_MM     = 9999;  // 範囲外（-3）を「遠い」として比べるための値。RC_read が返すどの距離（最大 2000 mm）よりも大きい
+
 // ---- 3.2 と同じ走り方のパラメータ ----
 const int PWM_SLOW   = 150;
 const int PWM_MID    = 200;
@@ -25,7 +29,7 @@ const unsigned long FLIP_WINDOW_MS = 3000;  // (1) この時間の中で
 const int           FLIP_LIMIT     = 4;     // (1) 前後が何回入れ替わったら「はまり」か
 const unsigned long STALL_CHECK_MS = 1000;  // (2) 前の距離を比べる間隔 [ms]
 const int           STALL_DELTA_MM = 20;    // (2) これより変化が小さければ「進んでいない」（測距誤差 1〜2cm を考慮）
-const int           STALL_NEAR_MM  = 200;   // (2) 前がこれより近いときだけ判定する（遠い壁は見ない。上限（RC_setReadLimit）以下にする）
+const int           STALL_NEAR_MM  = 200;   // (2) 前がこれより近いときだけ判定する（遠い壁は見ない。LIMIT_MM 以下にする）
 const int           STALL_LIMIT    = 2;     // (2) 何回続いたら「はまり」か（最初の 1 回は比べる相手が無いので検知まで約 3 秒）
 const int           CORNER_MM      = 120;   // (3) 前・左・右がすべてこれ未満なら角に入っている
 
@@ -34,7 +38,7 @@ const int           ESCAPE_PWM     = 200;   // 切り返しの速さ
 const unsigned long BACK_MS        = 600;   // 後退する時間 [ms]
 const unsigned long FWD_MS         = 400;   // 前進する時間 [ms]
 const int           ESCAPE_TRIES   = 3;     // 切り返しの最大回数
-const int           CLEAR_MM       = 200;   // 前がこれ以上開いたら脱出成功（上限（RC_setReadLimit）以下にする）
+const int           CLEAR_MM       = 200;   // 前がこれ以上開いたら脱出成功（LIMIT_MM 以下にする）
 const int           REAR_STOP_MM   = 80;    // 後方センサーがある車体：後ろがこれより近ければ後退をやめる
 const unsigned long COOLDOWN_MS    = 2000;  // 脱出のあと、再びはまりを判定しない時間 [ms]
 
@@ -50,17 +54,17 @@ unsigned long cooldownEnd = 0;      // 脱出のあと、この時刻までは�
 void setup()
 {
   RC_setup();
-  RC_setReadLimit(200);   // 信じる距離の上限 [mm]。これより先は -3（遠い）。上のしきい値はこの値以下にする
+  RC_setReadLimit(LIMIT_MM);   // LIMIT_MM より先は RC_read が -3（範囲外）を返す
 }
 
-// 距離が測れなかったとき（-1 や -3）は「遠い」として扱う（3.2 の 8190 と同じ考え方）
-// RC_read は上限（setup() の RC_setReadLimit）より先を -3（範囲外）にするので、-3 は「上限より手前に何もない」
-int farIfInvalid(int d)
+// 範囲外（-3）を「遠い」に置き換える。RC_read は LIMIT_MM より先を -3 にするので、
+// -3 は「上限より手前に何もない」。-1（読めない）は loop() の最初に止まるので、ここには来ない
+int farIfOutOfRange(int d)
 {
-  return (d < 0) ? 9999 : d;
+  return (d == -3) ? FAR_MM : d;
 }
 
-// 前が開いているか（遠い、または測れないほど遠い）
+// 前が開いているか（CLEAR_MM 以上、または -3 = 上限より手前に何もない）
 bool isClear(int s1)
 {
   return (s1 == -3) || (s1 >= CLEAR_MM);
@@ -130,8 +134,8 @@ void resetDetectors()
 // 切り返して脱出する
 void escape(int s0, int s2)
 {
-  // 近い壁の側を決める（測れない側は「遠い」とみなす）
-  int nearSide = (farIfInvalid(s0) < farIfInvalid(s2)) ? LEFT : RIGHT;
+  // 近い壁の側を決める（範囲外（-3）の側は「遠い」とみなす）
+  int nearSide = (farIfOutOfRange(s0) < farIfOutOfRange(s2)) ? LEFT : RIGHT;
   int farSide  = (nearSide == LEFT) ? RIGHT : LEFT;
 
   for (int i = 0; i < ESCAPE_TRIES; i++) {
@@ -177,9 +181,9 @@ void escape(int s0, int s2)
 // Exercise-3.2 と同じ走り方
 void driveLikeExercise32(int s0, int s1, int s2)
 {
-  int d0 = farIfInvalid(s0);
-  int d1 = farIfInvalid(s1);
-  int d2 = farIfInvalid(s2);
+  int d0 = farIfOutOfRange(s0);
+  int d1 = farIfOutOfRange(s1);
+  int d2 = farIfOutOfRange(s2);
 
   if (d1 < 100) {
     driveAndCount(REVERSE, PWM_SLOW);
@@ -208,6 +212,14 @@ void loop()
   Serial.print(" R:"); Serial.print(s2);
   Serial.print(" flips:"); Serial.print(flipCount);
   Serial.print(" stall:"); Serial.println(stallCount);
+
+  if (s0 < 0 || s1 < 0 || s2 < 0) {           // ステータス（負の数は距離ではない）。ステータスの処理はここにまとめる
+    if (s0 == -1 || s1 == -1 || s2 == -1) {   // -1：センサーが応答しない → 止まる（判断しない）
+      RC_drive(BRAKE, 0);
+      return;
+    }
+    // -3（範囲外）はこの先の判定がそれぞれ「上限より手前に何もない」として扱う
+  }
 
   bool canJudge = (millis() >= cooldownEnd);   // 脱出の直後は判定しない
   if (canJudge && (stuckByFlip()
