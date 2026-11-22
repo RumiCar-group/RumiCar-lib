@@ -82,8 +82,11 @@ strength: `RC_steer(RIGHT, 128)`.
 
 `-3` means "farther than the limit" and driving logic should treat it as open road.
 Note that `-3` is the *smallest* value numerically: a plain `if (d < 100)` would take it for
-"very close", so map it to a large value before comparing (`if (d == -3) d = 999;`). `-1` (no
-reading) is different from `-3` and should not be treated as open road.
+"very close", so before comparing, map it to a value larger than any distance `RC_read()` can
+return: larger than the limit you set with `RC_setReadLimit()`, or larger than 2000 when no limit
+is set (`if (d == -3) d = 9999;`). A smaller value such as 999 would be less than distances of
+1000 .. 2000 mm when no limit is set, so comparing left and right would steer the wrong way.
+`-1` (no reading) is different from `-3` and should not be treated as open road.
 
 Negative error codes (`-1`, `-2`, `-3`) keep the Y-axis of the Arduino IDE Serial Plotter
 clean. The normal range (0 .. limit) is preserved while errors are visible as small
@@ -147,9 +150,12 @@ The same API, values and return codes, including the strength argument of `RC_st
 `drive.py` with that same `RumiCar.py`, and by the
 [RumiCar Simulator](https://github.com/RumiCar-group/RumiCar-Simulator). A strength of `128`
 means a signal of 128/255 on each of them; the PWM frequency differs by computer module, and the
-steering angle a value gives differs by vehicle. `RC_setReadLimit()` and the 2000 mm default are
-being added to them with the same name and meaning (`RumiCar.py` 0.7.0, Zero2Cam 0.7.0,
-Simulator v12.0.0); until those versions are released, they still limit `RC_read()` to 200 mm.
+steering angle a value gives differs by vehicle. `RC_setReadLimit()` and the 2000 mm default of
+`RC_read()` (v0.7.0) are the same, with the same name and meaning, in `RumiCar.py` 0.7.0,
+RumiCar-Zero2Cam v0.7.0 and RumiCar Simulator v12.0.0. The versions before them (`RumiCar.py` up to
+0.6.0, Zero2Cam 0.4.0 .. 0.6.0, Simulator v11.x) limit `RC_read()` to 200 mm. In the Simulator
+the limit is clamped to the sensor range of the selected scale (2000 mm on the tabletop scale, as
+on the car).
 
 ### Direct sensor access (legacy / educational)
 
